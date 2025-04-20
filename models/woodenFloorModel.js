@@ -1,4 +1,4 @@
-import { Schema, model } from 'mongoose';
+const { Schema, model } = require('mongoose');
 
 const woodenFloorSchema = new Schema({
     name: {
@@ -132,4 +132,4 @@ woodenFloorSchema.pre('save', function(next) {
 
 const WoodenFloor = model('WoodenFloor', woodenFloorSchema);
 
-export default WoodenFloor;
+module.exports = WoodenFloor;
