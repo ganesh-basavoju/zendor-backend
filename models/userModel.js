@@ -132,7 +132,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "None",
     },
-    // Handle profile picture according to the format later -----change_required-----
+  
     profilePicture: {
       type: String,
       default: "None",
@@ -155,6 +155,26 @@ const userSchema = new mongoose.Schema(
         ref: "Product",
       },
     ],
+    recentActivity: [
+  {
+    activityType: {
+      type: String,
+      enum: ['order', 'wishlist', 'review', 'login', 'cart'], // extend as needed
+    },
+    message: {
+      type: String,
+      required: true,
+    },
+    icon: {
+      type: String, // optional: for frontend icon reference
+      default: 'info',
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    }
+  }
+],
     passwordResetToken: String,
     passwordResetExpires: Date,
   },
