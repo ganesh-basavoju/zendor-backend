@@ -1,4 +1,4 @@
-const WoodenFloor = require("../models/woodenFloorModel");
+const Wallpaper = require("../models/wallpaperModel");
 
 // Get all products with filtering, sorting, and pagination
 exports.getProducts = async (req, res) => {
@@ -20,7 +20,6 @@ exports.getProducts = async (req, res) => {
         { name: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
         { brand: { $regex: search, $options: "i" } },
-        { tags: { $regex: search, $options: "i" } },
         { finish: { $regex: search, $options: "i" } },
         { surface: { $regex: search, $options: "i" } }
       ];
@@ -49,14 +48,14 @@ exports.getProducts = async (req, res) => {
     }
 
     // Execute query with pagination and sorting
-    const products = await WoodenFloor.find(query)
+    const products = await Wallpaper.find(query)
       .sort(sortConfig)
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .select("_id subCategory name description sampleCost images dp bp brand tags finish surface");
 
     // Get total count for pagination
-    const total = await WoodenFloor.countDocuments(query);
+    const total = await Wallpaper.countDocuments(query);
 
     res.status(200).json({
       status: "success",
@@ -71,11 +70,8 @@ exports.getProducts = async (req, res) => {
         description: product.description,
         price: product.dp,
         sampleCost: product.sampleCost,
-        image: product.images,
-        brand: product.brand,
-        finish: product.finish,
-        surface: product.surface,
-        tags: product.tags
+        image: product.images[0].pic,
+      
       })),
     });
   } catch (error) {
@@ -89,7 +85,7 @@ exports.getProducts = async (req, res) => {
 // Get single product by ID
 exports.getProduct = async (req, res) => {
   try {
-    const product = await WoodenFloor.findById(req.params.id).select("-__v");
+    const product = await Wallpaper.findById(req.params.id).select("-__v");
     if (!product) {
       return res.status(404).json({
         status: "error",
@@ -111,7 +107,8 @@ exports.getProduct = async (req, res) => {
 // Create new product
 exports.createProduct = async (req, res) => {
   try {
-    const newProduct = await WoodenFloor.create(req.body);
+    console.log(req.body);
+    const newProduct = await Wallpaper.create(req.body);
     res.status(201).json({
       status: "success",
       data: newProduct,
@@ -127,13 +124,10 @@ exports.createProduct = async (req, res) => {
 // Update product
 exports.updateProduct = async (req, res) => {
   try {
-    const product = await WoodenFloor.findByIdAndUpdate(
+    const product = await Wallpaper.findByIdAndUpdate(
       req.params.id,
       req.body,
-      // {
-      //   new: true,
-      //   runValidators: true,
-      // }
+      
     );
 
     if (!product) {
@@ -158,7 +152,7 @@ exports.updateProduct = async (req, res) => {
 // Delete product (soft delete)
 exports.deleteProduct = async (req, res) => {
   try {
-    const product = await WoodenFloor.findByIdAndUpdate(
+    const product = await Wallpaper.findByIdAndUpdate(
       req.params.id,
       { isActive: false },
       { new: true }
@@ -185,7 +179,8 @@ exports.deleteProduct = async (req, res) => {
 
 exports.pushAll = async (req, res) => {
   try {
-    await WoodenFloor.insertMany(req.body);
+    console.log(req.body);
+    await Wallpaper.insertMany(req.body);
     res.status(200).json({
       status: "success",
       message: "Products pushed successfully",
@@ -200,7 +195,7 @@ exports.pushAll = async (req, res) => {
 
 exports.getCategories = async (req, res) => {
   try {
-    const subCategories = await WoodenFloor.distinct("subCategory");
+    const subCategories = await Wallpaper.distinct("subCategory");
     if (!subCategories || subCategories.length === 0) {
       return res.status(404).json({
         success: false,

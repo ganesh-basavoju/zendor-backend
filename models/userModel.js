@@ -1,10 +1,24 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
-const bcrypt = require("bcryptjs");
+const { Schema, model, Types } = require("mongoose");
+
+
+const MoodBoardSchema = new Schema({
+  productId: {
+    type: Types.ObjectId,
+    required: true,
+    refPath: 'collections.productType' // Correct refPath
+  },
+  productType: {
+    type: String,
+    required: true,
+    enum: ['Wallpaper', 'WoodenFloor'], 
+  }
+}, { _id: false });
 
 const userSchema = new mongoose.Schema(
   {
-    google_id: { type: String, unique: true,default:null },
+    google_id: { type: String, unique: true },
     userName: {
       type: String,
       required: [true, "Name is required"],
@@ -57,7 +71,7 @@ const userSchema = new mongoose.Schema(
         type: String,
         default: "None",
       },
-      Pincode: {
+      PinCode: {
         type: String,
         default: "None",
       },
@@ -76,6 +90,10 @@ const userSchema = new mongoose.Schema(
       phone: {
         type: String,
         default: "None",
+      },
+      isHome: {
+        type: Boolean,
+        default: true,
       },
     },
     shippingAddress: {
@@ -107,7 +125,7 @@ const userSchema = new mongoose.Schema(
         type: String,
         default: "None",
       },
-      Pincode: {
+      PinCode: {
         type: String,
         default: "None",
       },
@@ -127,21 +145,39 @@ const userSchema = new mongoose.Schema(
         type: String,
         default: "None",
       },
+      isHome: {
+        type: Boolean,
+        default: true,
+      },
     },
     phone: {
       type: String,
       default: "None",
     },
-  
+
     profilePicture: {
       type: String,
       default: "None",
     },
-    wishlist: [
+    MoodBoard: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Product",
-      },
+        name: {
+          type: String,
+          required: true,
+        },
+        address: {
+          type: String,
+          required: true,
+        },
+        thumbnail: {
+          type: String,
+          required: true,
+        },
+        collections:{
+         type: [MoodBoardSchema],
+         default: [],
+        }
+      }
     ],
     orders: [
       {
@@ -152,50 +188,36 @@ const userSchema = new mongoose.Schema(
     cart: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Product",
+        ref: "Cart",
       },
     ],
     recentActivity: [
-  {
-    activityType: {
-      type: String,
-      enum: ['order', 'wishlist', 'review', 'login', 'cart'], // extend as needed
-    },
-    message: {
-      type: String,
-      required: true,
-    },
-    icon: {
-      type: String, // optional: for frontend icon reference
-      default: 'info',
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    }
-  }
-],
-    passwordResetToken: String,
-    passwordResetExpires: Date,
+      {
+        activityType: {
+          type: String,
+          enum: ["order", "wishlist", "review", "login", "cart"], // extend as needed
+        },
+        message: {
+          type: String,
+          required: true,
+        },
+        icon: {
+          type: String, // optional: for frontend icon reference
+          default: "info",
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    passwordResetToken:{type: String,default:null},
+    passwordResetExpires:{type: Date,default:null},
   },
   { timestamps: true }
 );
 
-// Hash password before saving
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
 
-// Method to check if password is correct
-userSchema.methods.comparePassword = async function (
-  candidatePassword,
-  userPassword
-) {
-  return await bcrypt.compare(candidatePassword, userPassword);
-};
 
 const User = mongoose.model("User", userSchema);
 
