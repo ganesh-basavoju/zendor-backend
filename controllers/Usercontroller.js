@@ -299,39 +299,90 @@ exports.FetchResults = async (req, res) => {
       return res.status(200).json([]);
     }
 
-    // Create search query with text index
-    const query = {
+    // Common search fields for both collections
+    const commonSearchFields = [
+      { name: { $regex: search, $options: "i" } },
+      { subCategory: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+      { brand: { $regex: search, $options: "i" } },
+      { tags: { $regex: search, $options: "i" } }
+    ];
+
+    // Search query for WoodenFloor
+    const woodenFloorQuery = {
       $and: [
-        { isActive: true }, // Only search active products
+        { isActive: true },
         {
           $or: [
-            { name: { $regex: search, $options: "i" } },
-            { subCategory: { $regex: search, $options: "i" } },
-            { description: { $regex: search, $options: "i" } },
-            { brand: { $regex: search, $options: "i" } },
-            { tags: { $regex: search, $options: "i" } },
+            ...commonSearchFields,
             { finish: { $regex: search, $options: "i" } },
-            { surface: { $regex: search, $options: "i" } },
-          ],
-        },
-      ],
+            { surface: { $regex: search, $options: "i" } }
+          ]
+        }
+      ]
     };
 
-    // Execute search with projection and limit
-    const results = await WoodenFloor.find(query)
-      .select("_id name subCategory images") // Only select needed fields
-      .limit(6)
-      .lean(); // Use lean() for better performance
+    // Search query for Wallpaper
+    const wallpaperQuery = {
+      $and: [
+        { isActive: true },
+        {
+          $or: [
+            ...commonSearchFields,
+            { pattern: { $regex: search, $options: "i" } },
+            { material: { $regex: search, $options: "i" } }
+          ]
+        }
+      ]
+    };
 
-    // Transform results for frontend
-    const transformedResults = results.map((item, index) => ({
-      id: item._id,
-      name: item.name,
-      category: item.subCategory,
-      image: item.images?.[0] || null, // Include first image if available
-    }));
+    // Execute both searches in parallel
+    const [woodenFloorResults, wallpaperResults] = await Promise.all([
+      WoodenFloor.find(woodenFloorQuery)
+        .select("_id name subCategory images price")
+        .limit(6)
+        .lean(),
+      Wallpaper.find(wallpaperQuery)
+        .select("_id name subCategory images price")
+        .limit(6)
+        .lean()
+    ]);
 
-    res.status(200).json(transformedResults);
+    // Transform and combine results
+    const combinedResults = [
+      ...woodenFloorResults.map(item => ({
+        id: item._id,
+        name: item.name,
+        category: item.subCategory,
+        image: item.images?.[0] || null,
+        price: item.price,
+        type: 'woodenFloor' // Add type identifier
+      })),
+      ...wallpaperResults.map(item => ({
+        id: item._id,
+        name: item.name,
+        category: item.subCategory,
+        image: item.images?.[0] || null,
+        price: item.price,
+        type: 'wallpaper' // Add type identifier
+      }))
+    ];
+
+    // Sort by relevance (simple example - could be enhanced)
+    combinedResults.sort((a, b) => {
+      // Prioritize matches in name over other fields
+      const aNameMatch = a.name.toLowerCase().includes(search.toLowerCase());
+      const bNameMatch = b.name.toLowerCase().includes(search.toLowerCase());
+      
+      if (aNameMatch && !bNameMatch) return -1;
+      if (!aNameMatch && bNameMatch) return 1;
+      return 0;
+    });
+
+    // Limit total results (optional)
+    const finalResults = combinedResults.slice(0, 12);
+
+    res.status(200).json(finalResults);
   } catch (error) {
     console.error("Search error:", error);
     res.status(500).json({
@@ -369,6 +420,7 @@ exports.getUserAddress = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
+    const userId = req.user?.id;
     // Fetch all users excluding sensitive information
     const users = await User.find({})
       .select("userName email role isActive")
@@ -466,14 +518,9 @@ exports.addRole = async (req, res) => {
 exports.updateRole = async (req, res) => {
   try {
     const { userId, newRole } = req.body;
+    console.log(req.body);
 
-    // Check if the requesting user is an admin
-    if (req.user.role !== "admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Only administrators can update user roles",
-      });
-    }
+    
 
     // Validate the new role
     if (!["customer", "admin"].includes(newRole)) {
@@ -482,6 +529,8 @@ exports.updateRole = async (req, res) => {
         message: "Invalid role specified",
       });
     }
+
+    
 
     const user = await User.findByIdAndUpdate(
       userId,
@@ -520,15 +569,10 @@ exports.deleteRole = async (req, res) => {
     const { userId } = req.params;
 
     // Check if the requesting user is an admin
-    if (req.user.role !== "admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Only administrators can delete users",
-      });
-    }
-
+    
+    
     // Prevent admin from deleting themselves
-    if (userId === req.user.id) {
+    if (userId === req.admin.id) {
       return res.status(400).json({
         success: false,
         message: "Administrators cannot delete their own account",

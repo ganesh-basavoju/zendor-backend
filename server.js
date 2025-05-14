@@ -32,5 +32,5 @@ app.use("/api/payments", paymentRoutes)
 
 
 app.listen(process.env.PORT, () => {
-  console.log(`Server is running on http://localhost:}`);
+  console.log(`Server is running on http://localhost: ${process.env.PORT}`);
 });

@@ -31,6 +31,7 @@ const addToCart = async (req, res) => {
         floorArea,
         pricePerUnit
       } = item;
+      console.log(floorArea,"follo");
 
       if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
         return res.status(400).json({ message: "Invalid product ID" });

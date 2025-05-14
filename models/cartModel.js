@@ -1,62 +1,71 @@
 const { Schema, model, Types } = require("mongoose");
 
-const cartItemSchema = new Schema({
-  productId: {
-    type: Types.ObjectId,
-    required: true,
-    refPath: 'productType', // Dynamically reference correct model
-  },
-  productType: {
-    type: String,
-    required: true,
-    enum: ['Wallpaper', 'WoodenFloor'], // Add more as needed
-  },
-  isSample:{type:Boolean,default:false},
-  quantity: {
-    type: Number,
-    min: [1, 'Quantity must be at least 1'],
-  },
-  size: {
-    width: Number,
-    height: Number,
-    unit: {
+const cartItemSchema = new Schema(
+  {
+    productId: {
+      type: Types.ObjectId,
+      required: true,
+      refPath: "productType", // Dynamically reference correct model
+    },
+    productType: {
       type: String,
-      enum: ['inches', 'feet'],
-      default: 'feet'
-    }
-  },
-  area: Number, 
-  floorArea: {
-    wallA: {
+      required: true,
+      enum: ["Wallpaper", "WoodenFloor"], // Add more as needed
+    },
+    isSample: { type: Boolean, default: false },
+    quantity: {
+      type: Number,
+      min: [1, "Quantity must be at least 1"],
+    },
+    size: {
       width: Number,
       height: Number,
-      area:Number,
-      price:Number,
+      unit: {
+        type: String,
+        enum: ["inches", "feet"],
+        default: "feet",
+      },
     },
-    wallB: {
+    area: Number,
+    floorArea: {
+      wallA: {
         width: Number,
         height: Number,
-        area:Number,
-        price:Number,
-    },
-    wallC: {
+        area: Number,
+        price: Number,
+        texture: String,
+        color: String,
+      },
+      wallB: {
         width: Number,
         height: Number,
-        area:Number,
-        price:Number,
-    },
-    wallD: {
+        area: Number,
+        price: Number,
+        texture: String,
+        color: String,
+      },
+      wallC: {
         width: Number,
         height: Number,
-        area:Number,
-        price:Number,
-    }
+        area: Number,
+        price: Number,
+        texture: String,
+        color: String,
+      },
+      wallD: {
+        width: Number,
+        height: Number,
+        area: Number,
+        price: Number,
+        texture: String,
+        color: String,
+      },
+    },
+    pricePerUnit: Number, // Useful for historical accuracy (in case price changes later)
+    totalPrice: Number,
   },
-  pricePerUnit: Number, // Useful for historical accuracy (in case price changes later)
-  totalPrice: Number
-}, { _id: false });
-
-
+  { _id: false }
+);
 
 const cartSchema = new Schema({
   userId: {
@@ -75,12 +84,12 @@ const cartSchema = new Schema({
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   updatedAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
 // Update timestamp before save

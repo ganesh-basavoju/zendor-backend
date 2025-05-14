@@ -552,6 +552,11 @@ const getAllOrders = async (req, res) => {
         model: WoodenFloor,
         select: "name images price",
       })
+      .populate({
+        path: 'items.productId',
+        model: Wallpaper,
+        select: 'name images price'
+      })
       .sort({ createdAt: -1 }) // Most recent orders first
       .lean(); // Convert to plain JavaScript object
 

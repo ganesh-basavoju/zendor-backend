@@ -152,10 +152,10 @@ exports.updateProduct = async (req, res) => {
 // Delete product (soft delete)
 exports.deleteProduct = async (req, res) => {
   try {
-    const product = await Wallpaper.findByIdAndUpdate(
-      req.params.id,
-      { isActive: false },
-      { new: true }
+    const product = await Wallpaper.findByIdAndDelete(
+      req.params.id
+      // { isActive: false },
+      // { new: true }
     );
 
     if (!product) {
