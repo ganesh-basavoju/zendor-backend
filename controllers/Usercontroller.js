@@ -929,3 +929,46 @@ exports.deleteFromMoodBoardCollections = async (req, res) => {
     });
   }
 };
+
+// Get total products count
+exports.getProductsCount = async (req, res) => {
+  try {
+    // Count all products (both wallpapers and wooden floors)
+    const wallpaperCount = await Wallpaper.countDocuments();
+    const flooringCount = await WoodenFloor.countDocuments();
+    
+    const totalCount = wallpaperCount + flooringCount;
+    
+    return res.status(200).json({
+      success: true,
+      count: totalCount
+    });
+  } catch (error) {
+    console.error('Error getting products count:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while getting products count'
+    });
+  }
+};
+
+// Get total users count
+exports.getUsersCount = async (req, res) => {
+  try {
+    // Only admins should be able to access this endpoint
+    
+    
+    const count = await User.countDocuments();
+    
+    return res.status(200).json({
+      success: true,
+      count: count
+    });
+  } catch (error) {
+    console.error('Error getting users count:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while getting users count'
+    });
+  }
+};

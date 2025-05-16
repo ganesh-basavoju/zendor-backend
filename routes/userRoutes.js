@@ -9,7 +9,9 @@ const { FetchUserProfile, changePassword,
      updateMoodBoard,
      getCollectionOfMoodBoard,
      addCollectionToMoodBoard,
-     deleteFromMoodBoardCollections} = require('../controllers/Usercontroller');
+     deleteFromMoodBoardCollections,
+     getProductsCount,
+     getUsersCount} = require('../controllers/Usercontroller');
 const router = express.Router();
 
 router.get("/getUserprofile",authMiddleware,FetchUserProfile);
@@ -47,4 +49,7 @@ router.post("/get-moodBoard-collection",authMiddleware,getCollectionOfMoodBoard)
 router.post("/add-to-moodBoard",authMiddleware,addCollectionToMoodBoard);
 
 router.post("/delete-From-MoodBoard-Collections",authMiddleware,deleteFromMoodBoardCollections)
+// Add these routes
+router.get('/products-count', authMiddleware, getProductsCount);
+router.get('/users-count', authMiddleware, getUsersCount);
 module.exports=router;
