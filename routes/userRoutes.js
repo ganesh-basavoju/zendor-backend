@@ -17,7 +17,7 @@ const router = express.Router();
 router.get("/getUserprofile",authMiddleware,FetchUserProfile);
 router.put("/change-password",authMiddleware,changePassword);
 
-router.put("/edit-profile",authMiddleware,EditProfile);
+router.post("/edit-profile",authMiddleware,EditProfile);
 
 router.put("/edit-billingAddress",authMiddleware,EditBillingAddress);
 

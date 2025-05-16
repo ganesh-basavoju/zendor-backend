@@ -75,21 +75,24 @@ exports.changePassword = async (req, res) => {
   }
 };
 
+
 exports.EditProfile = async (req, res) => {
   const userId = req.user?.id;
+
+  console.log(req.body);
 
   if (!userId) {
     return res.status(400).json({ msg: "User ID is missing." });
   }
 
-  const { userName, profilePicture } = req.body;
-
+  const { displayName, PhoneNumber,profilePic } = req.body;
+ 
   try {
     const updatedFields = {};
 
-    if (userName) updatedFields.userName = userName;
-    if (profilePicture) updatedFields.profilePicture = profilePicture;
-
+    if (displayName) updatedFields.userName= displayName;
+    if (profilePic) updatedFields.profilePicture = profilePic;
+    if (PhoneNumber) updatedFields.phone = PhoneNumber;
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $set: updatedFields },
@@ -102,8 +105,8 @@ exports.EditProfile = async (req, res) => {
 
     res.status(200).json({
       msg: "Profile updated successfully.",
-      data: updatedUser,
     });
+
   } catch (error) {
     console.error("EditProfile Error:", error);
     res
