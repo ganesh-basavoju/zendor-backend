@@ -147,6 +147,75 @@ const addToCart = async (req, res) => {
   }
 };
 
+const getGuestCart = async (req, res) => {
+  try {
+    const { items = [] } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(200).json({
+        message: "Cart is empty",
+        cart: {
+          items: [],
+          totalQuantity: 0,
+          totalAmount: 0
+        }
+      });
+    }
+
+    let totalQuantity = 0;
+    let totalAmount = 0;
+
+    // Separate items by product type
+    const wallpaperItems = items.filter(item => item.productType === 'Wallpaper');
+    const woodenFloorItems = items.filter(item => item.productType === 'WoodenFloor');
+
+    // Function to populate items with product details
+    const populateItems = async (items, ProductModel) => {
+      const productIds = items.map(item => item.productId);
+      const products = await ProductModel.find({ _id: { $in: productIds } })
+        .select('name images price dp sampleCost');
+
+      return items.map(item => {
+        const product = products.find(p => p._id.toString() === item.productId);
+        if (!product) return null;
+
+        // Update totals
+        if (item.isSample) totalQuantity += item.quantity || 0;
+        totalAmount += item.totalPrice || 0;
+
+        return {
+          ...item,
+          productId: product // Replace ID with populated product data
+        };
+      }).filter(item => item !== null); // Remove any items where product wasn't found
+    };
+
+    // Populate both types of items
+    const populatedWallpapers = wallpaperItems.length > 0
+      ? await populateItems(wallpaperItems, Wallpaper)
+      : [];
+
+    const populatedWoodenFloors = woodenFloorItems.length > 0
+      ? await populateItems(woodenFloorItems, WoodenFloor)
+      : [];
+
+    // Combine all populated items
+    const populatedItems = [...populatedWallpapers, ...populatedWoodenFloors];
+
+    return res.status(200).json({
+      message: "Guest cart fetched successfully",
+      cart: {
+        items: populatedItems,
+        totalQuantity,
+        totalAmount
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching guest cart:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
 const getCart = async (req, res) => {
   try {
@@ -154,7 +223,8 @@ const getCart = async (req, res) => {
       
       // First, find the cart with all items
       let cart = await Cart.findOne({ userId });
-      
+
+      console.log("cart",cart);
       if (!cart || cart.items.length === 0) {
           return res.status(200).json({
               message: "Cart is empty",
@@ -437,4 +507,4 @@ const updateCartItemQuantity = async (req, res) => {
 };
 
 // Update the exports
-module.exports = { addToCart, getCart, removeFromCart, updateCartItemQuantity };
+module.exports = { addToCart, getCart, removeFromCart, updateCartItemQuantity ,getGuestCart};

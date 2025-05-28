@@ -60,7 +60,7 @@ const cartItemSchema = new Schema(
         texture: String,
         color: String,
       },
-    },
+    }, 
     pricePerUnit: Number, // Useful for historical accuracy (in case price changes later)
     totalPrice: Number,
   },
@@ -71,7 +71,7 @@ const cartSchema = new Schema({
   userId: {
     type: Types.ObjectId,
     ref: "User", // Assuming you have a User model
-    required: true,
+    required: false,
   },
   items: [cartItemSchema],
   totalQuantity: {
