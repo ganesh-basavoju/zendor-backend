@@ -240,10 +240,10 @@ const axios = require("axios");
 //   }
 // };
 
-
-
 const createOrder = async (req, res) => {
   try {
+    const shiprocketToken = await getShiprocketToken();
+    console.log("ship token", shiprocketToken);
     console.log("Create order endpoint called");
     const userId = req.user?.id;
     const {
@@ -370,7 +370,6 @@ const createOrder = async (req, res) => {
     });
 
     // Get Shiprocket token (store in env or fetch at login)
-    const shiprocketToken = await getShiprocketToken();
 
     // Prepare items for Shiprocket API
     const totalQuantity = allItems.reduce(
@@ -380,11 +379,14 @@ const createOrder = async (req, res) => {
 
     const shiprocketPayload = {
       order_id: newOrder._id.toString(),
-      order_date: new Date().toISOString(),
-      pickup_location: "Primary", // Set in Shiprocket dashboard
+      order_date: new Date().toISOString().split('T')[0], // Format: YYYY-MM-DD
+      pickup_location: "Home",
+      channel_id: "7120096",
+      comment: "Order created via API",
       billing_customer_name: shippingAddress.firstName,
       billing_last_name: shippingAddress.lastName,
       billing_address: shippingAddress.Street,
+      billing_address_2: shippingAddress.Landmark || "",
       billing_city: shippingAddress.City,
       billing_pincode: shippingAddress.PinCode,
       billing_state: shippingAddress.State,
@@ -392,18 +394,35 @@ const createOrder = async (req, res) => {
       billing_email: shippingAddress.email,
       billing_phone: shippingAddress.phone,
       shipping_is_billing: true,
+      shipping_customer_name: "",
+      shipping_last_name: "",
+      shipping_address: "",
+      shipping_address_2: "",
+      shipping_city: "",
+      shipping_pincode: "",
+      shipping_country: "",
+      shipping_state: "",
+      shipping_email: "",
+      shipping_phone: "",
       order_items: allItems.map((item) => ({
         name: item.productDetails.name,
         sku: `SKU_${item.productId}`,
         units: item.quantity || 1,
         selling_price: item.totalPrice,
+        discount: "",
+        tax: "",
+        hsn: 441122
       })),
       payment_method: paymentMode === "COD" ? "COD" : "Prepaid",
+      shipping_charges: shippingPrice,
+      giftwrap_charges: 0,
+      transaction_charges: 0,
+      total_discount: 0,
       sub_total: totalPrice,
       length: 10,
-      breadth: 10,
-      height: 10,
-      weight: 0.5 * totalQuantity,
+      breadth: 15,
+      height: 20,
+      weight: 0.5 * totalQuantity
     };
 
     const shiprocketRes = await axios.post(
@@ -416,13 +435,18 @@ const createOrder = async (req, res) => {
         },
       }
     );
-
-    if (shiprocketRes.status === 200 && shiprocketRes.data.shipment_id) {
-      newOrder.trackingNumber = shiprocketRes.data.awb_code;
-      newOrder.shippingProvider = "Shiprocket";
-      newOrder.shipmentId = shiprocketRes.data.shipment_id;
+     console.log("ship",shiprocketRes)
+    if (shiprocketRes.status === 200) {
+      if (shiprocketRes.data && shiprocketRes.data.shipment_id) {
+        newOrder.trackingNumber = shiprocketRes.data.awb_code;
+        newOrder.shippingProvider = "Shiprocket";
+        newOrder.shipmentId = shiprocketRes.data.shipment_id;
+      } else {
+        console.error("Shiprocket response:", shiprocketRes.data);
+        throw new Error("Shiprocket order created but shipment_id not received");
+      }
     } else {
-      throw new Error("Failed to create shipping order in Shiprocket");
+      throw new Error(`Failed to create shipping order in Shiprocket: ${shiprocketRes.data?.message || 'Unknown error'}`);
     }
 
     const savedOrder = await newOrder.save();
@@ -553,9 +577,9 @@ const getAllOrders = async (req, res) => {
         select: "name images price",
       })
       .populate({
-        path: 'items.productId',
+        path: "items.productId",
         model: Wallpaper,
-        select: 'name images price'
+        select: "name images price",
       })
       .sort({ createdAt: -1 }) // Most recent orders first
       .lean(); // Convert to plain JavaScript object

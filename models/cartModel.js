@@ -63,6 +63,8 @@ const cartItemSchema = new Schema(
     }, 
     pricePerUnit: Number, // Useful for historical accuracy (in case price changes later)
     totalPrice: Number,
+    color:String,
+    texture:String
   },
   { _id: false }
 );
