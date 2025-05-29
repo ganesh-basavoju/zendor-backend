@@ -6,6 +6,7 @@ const cartRoutes = require('./routes/cartRoutes');
 const cors = require('cors');
 const woodenFloorRoutes = require('./routes/woodenFloorRoutes');
 const wallpaperRoutes = require('./routes/wallpaperRoutes');
+const acousticRoutes = require('./routes/acousticRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const app = express();
@@ -25,9 +26,10 @@ app.use('/api/auth', authRoutes);
 app.use("/api/user", userRoutes)
 app.use('/api/wooden-floors', woodenFloorRoutes);
 app.use('/api/wallpapers', wallpaperRoutes);
+app.use('/api/acoustics', acousticRoutes);
 app.use('/api/cart', cartRoutes);
-app.use("/api/orders", orderRoutes)
-app.use("/api/payments", paymentRoutes)
+app.use("/api/orders", orderRoutes);
+app.use("/api/payments", paymentRoutes);
 
 
 
