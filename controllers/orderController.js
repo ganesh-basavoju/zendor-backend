@@ -328,6 +328,8 @@ const createOrder = async (req, res) => {
           ? item.productDetails.images[0]?.pic
           : item.productDetails?.images,
       isSample: item.isSample,
+      color: item.productType === "Wallpaper"? item.productDetails.color : "",
+      texture: item.productType === "Wallpaper"? item.productDetails.texture : "",
       quantity: item.isSample ? item.quantity : undefined,
       floorArea: item.floorArea,
       pricePerUnit: item.pricePerUnit,
@@ -588,7 +590,7 @@ const getAllOrders = async (req, res) => {
 
     // Format orders to match frontend UI requirements
     const formattedOrders = orders.map((order) => ({
-      orderId: order.trackingNumber, // Format: #25426
+      orderId: `ORD-${order._id.toString().slice(-8).toUpperCase()}`, // Format: #25426
       date: new Date(order.createdAt).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
@@ -669,7 +671,7 @@ const getOrderDetails = async (req, res) => {
       const productIds = items.map((item) => item.productId);
       const products = await model
         .find({ _id: { $in: productIds } })
-        .select("name images price dp sampleCost thumbnail category")
+        .select("name images price dp sampleCost thumbnail category texture")
         .lean();
 
       return items.map((item) => {
@@ -765,6 +767,7 @@ const getOrderDetails = async (req, res) => {
         price: item.pricePerUnit,
         quantity: item.quantity || (item.isSample ? 1 : null),
         total: item.totalPrice,
+        texture: item.productDetails?.texture ,
         isSample: item.isSample || false,
         size: item.size,
         floorArea: item.floorArea,

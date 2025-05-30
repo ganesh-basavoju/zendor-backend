@@ -60,6 +60,8 @@ const orderItemSchema = new Schema(
         price: Number
       }
     },
+    color:{type:String},
+    texture:{type:String},
     pricePerUnit: {
       type: Number,
       required: true
