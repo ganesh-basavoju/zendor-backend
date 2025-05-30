@@ -335,6 +335,8 @@ const createOrder = async (req, res) => {
       pricePerUnit: item.pricePerUnit,
       totalPrice: item.totalPrice,
       status: "pending",
+      texture: item?.texture || "NA",
+      color: item?.color || "NA",
     }));
 
     const paymentResult =
@@ -367,7 +369,9 @@ const createOrder = async (req, res) => {
       deliveredAt: null,
       isCancelled: false,
       cancelledAt: null,
-      trackingNumber: null,
+      order_id: null,
+      shipment_id: null,
+      awb_code: null,
       notes: shippingAddress.notes || "",
     });
 
@@ -381,7 +385,7 @@ const createOrder = async (req, res) => {
 
     const shiprocketPayload = {
       order_id: newOrder._id.toString(),
-      order_date: new Date().toISOString().split('T')[0], // Format: YYYY-MM-DD
+      order_date: new Date().toISOString().split("T")[0], // Format: YYYY-MM-DD
       pickup_location: "Home",
       channel_id: "7120096",
       comment: "Order created via API",
@@ -413,7 +417,7 @@ const createOrder = async (req, res) => {
         selling_price: item.totalPrice,
         discount: "",
         tax: "",
-        hsn: 441122
+        hsn: 441122,
       })),
       payment_method: paymentMode === "COD" ? "COD" : "Prepaid",
       shipping_charges: shippingPrice,
@@ -424,7 +428,7 @@ const createOrder = async (req, res) => {
       length: 10,
       breadth: 15,
       height: 20,
-      weight: 0.5 * totalQuantity
+      weight: 0.5 * totalQuantity,
     };
 
     const shiprocketRes = await axios.post(
@@ -437,18 +441,25 @@ const createOrder = async (req, res) => {
         },
       }
     );
-     console.log("ship",shiprocketRes)
+    console.log("ship", shiprocketRes);
     if (shiprocketRes.status === 200) {
       if (shiprocketRes.data && shiprocketRes.data.shipment_id) {
-        newOrder.trackingNumber = shiprocketRes.data.awb_code;
+        newOrder.awb_code = shiprocketRes.data.awb_code;
         newOrder.shippingProvider = "Shiprocket";
-        newOrder.shipmentId = shiprocketRes.data.shipment_id;
+        (newOrder.order_id = shiprocketRes.data.order_id),
+          (newOrder.shipment_id = shiprocketRes.data.shipment_id);
       } else {
         console.error("Shiprocket response:", shiprocketRes.data);
-        throw new Error("Shiprocket order created but shipment_id not received");
+        throw new Error(
+          "Shiprocket order created but shipment_id not received"
+        );
       }
     } else {
-      throw new Error(`Failed to create shipping order in Shiprocket: ${shiprocketRes.data?.message || 'Unknown error'}`);
+      throw new Error(
+        `Failed to create shipping order in Shiprocket: ${
+          shiprocketRes.data?.message || "Unknown error"
+        }`
+      );
     }
 
     const savedOrder = await newOrder.save();
