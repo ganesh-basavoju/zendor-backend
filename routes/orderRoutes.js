@@ -7,11 +7,12 @@ const {
   updateOrder,
   getAllOrders,
   getOrderDetails,
-  updateOrderStatus
+  updateOrderStatus,
 } = require("../controllers/orderController");
 
 const authMiddleware = require("../middleware/authMiddleware");
-
+const generateToken = require("../utils/generateToken");
+const { default: axios } = require("axios");
 
 router.post("/create-order", authMiddleware, createOrder);
 router.get("/getAllOrders", authMiddleware, getAllOrders);

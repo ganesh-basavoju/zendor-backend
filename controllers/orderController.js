@@ -444,8 +444,8 @@ const createOrder = async (req, res) => {
       if (shiprocketRes.data && shiprocketRes.data.shipment_id) {
         newOrder.awb_code = shiprocketRes.data.awb_code;
         newOrder.shippingProvider = "Shiprocket";
-        (newOrder.order_id = shiprocketRes.data.order_id),
-          (newOrder.shipment_id = shiprocketRes.data.shipment_id);
+        newOrder.order_id = shiprocketRes.data.order_id;
+        newOrder.shipment_id = shiprocketRes.data.shipment_id;
       } else {
         console.error("Shiprocket response:", shiprocketRes.data);
         throw new Error(
