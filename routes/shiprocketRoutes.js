@@ -1,49 +1,4 @@
-// const express = require("express");
-// const generateToken = require("../utils/generateToken");
-// const { getShiprocketToken } = require("../utils/shiprocket");
-// const { default: axios } = require("axios");
-// const router = express.Router();
 
-// router.get("/serviceability", async (req, res) => {
-//   try {
-//     const token = getShiprocketToken();
-//     const { pincode, weight = 1, cod = 0 } = req.query;
-
-//     if (!pincode) {
-//       return res.status(400).json({ error: "Pincode is required" });
-//     }
-
-//     const response = await axios.get(
-//       "https://apiv2.shiprocket.in/v1/external/courier/serviceability",
-//       {
-//         params: {
-//           pickup_postcode: 400072,
-//           delivery_postcode: pincode,
-//           weight: weight,
-//           cod: cod,
-//         },
-//         headers: {
-//           Authorization: `Bearer ${token}`,
-//         },
-//       }
-//     );
-//     console.log(response.data, "ship");
-
-//     res.json({
-//       available: response.data.status === 200,
-//       data: response.data.data,
-//     });
-//   } catch (error) {
-//     console.log(error);
-//     console.error("Shiprocket error:", error.response?.data || error.message);
-//     res.status(500).json({
-//       error: "Error checking serviceability",
-//       details: error.response?.data || error.message,
-//     });
-//   }
-// });
-// module.exports = router;
-// backend/routes/shiprocket.js
 const express = require("express");
 const axios = require("axios");
 const { getShiprocketToken } = require("../utils/shiprocket");
@@ -149,6 +104,8 @@ router.get("/serviceability", ensureToken, async (req, res) => {
   }
 });
 
+
+
 router.get("/track", ensureToken, async (req, res) => {
   try {
     console.log("tracking called");
@@ -176,9 +133,9 @@ router.get("/track", ensureToken, async (req, res) => {
     const trackingData = {
       tracking_number:
         response.data.tracking_data?.tracking_number || tracking_id,
-      status: response.data.tracking_data?.status || "Unknown",
+      status: response.data.tracking_data?.status || "processing",
       estimated_delivery: response.data.tracking_data?.etd || null,
-      courier_name: response.data.tracking_data?.courier_name || "Unknown",
+      courier_name: response.data.tracking_data?.courier_name || "No courier assigned till now",
       history: (
         response.data.tracking_data?.shipment_track_activities || []
       ).map((activity) => ({
@@ -190,6 +147,24 @@ router.get("/track", ensureToken, async (req, res) => {
             .join(", ") || "Location not available",
       })),
     };
+    // const trackingData = {
+    //   orderId: order?._id || null,
+    //   trackingNumber: shiprocketData.shipment_track[0]?.awb_code || tracking_id,
+    //   status: currentStatus,
+    //   statusCode: shiprocketData.shipment_status,
+    //   estimatedDelivery: shiprocketData.etd || shiprocketData.shipment_track[0]?.edd || null,
+    //   courierName: shiprocketData.shipment_track[0]?.courier_name || order?.shiprocketCourierName || 'Not assigned',
+    //   history: (shiprocketData.shipment_track_activities || []).map(activity => ({
+    //     status: activity.status,
+    //     activity: activity.activity,
+    //     date: activity.date,
+    //     location: activity.location,
+    //     statusCode: activity['sr-status']
+    //   })),
+    //   trackUrl: shiprocketData.track_url || order?.shiprocketTrackingUrl,
+    //   orderStatus: order?.status || 'unknown'
+    // };
+
 
     res.json(trackingData);
   } catch (error) {
