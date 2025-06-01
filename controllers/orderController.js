@@ -92,7 +92,7 @@ const createOrder = async (req, res) => {
     const taxPrice = calculateTax(itemsPrice);
     const shippingPrice = 0;
     const totalPrice = Math.ceil(itemsPrice + taxPrice + shippingPrice);
-
+    console.log("all itms", allItems);
     const orderItems = allItems.map((item) => ({
       productId: item.productId,
       productType: item.productType,
@@ -102,11 +102,12 @@ const createOrder = async (req, res) => {
           ? item.productDetails.images[0]?.pic
           : item.productDetails?.images,
       isSample: item.isSample,
-      color: item.productType === "Wallpaper"? item.productDetails.color : "",
-      texture: item.productType === "Wallpaper"? item.productDetails.texture : "",
+      color: item.productType === "Wallpaper" ? item.productDetails.color : "",
+      texture:
+        item.productType === "Wallpaper" ? item.productDetails.texture : "",
       quantity: item.isSample ? item.quantity : undefined,
       floorArea: item.floorArea,
-      pricePerUnit: item.pricePerUnit,
+      pricePerUnit: item.pricePerUnit||0,
       totalPrice: item.totalPrice,
       status: "pending",
       texture: item?.texture || "NA",
@@ -215,7 +216,7 @@ const createOrder = async (req, res) => {
         },
       }
     );
-    console.log("ship", shiprocketRes);
+
     if (shiprocketRes.status === 200) {
       if (shiprocketRes.data && shiprocketRes.data.shipment_id) {
         newOrder.awb_code = shiprocketRes.data.awb_code;
