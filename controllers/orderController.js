@@ -12,233 +12,7 @@ const axios = require("axios");
 //   key_secret: process.env.RAZORPAY_SECRET,
 // });
 
-// const createOrder = async (req, res) => {
-//   try {
-//     console.log("Create order endpoint called");
-//     const userId = req.user?.id;
-//     const { shippingAddress, paymentMode = "COD", razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
 
-//     // Validate required fields
-//     if (!shippingAddress) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Invalid or missing shipping address details",
-//       });
-//     }
-
-//     // Validate payment details for Prepaid orders
-//     if (paymentMode === "Prepaid" && (!razorpayPaymentId || !razorpayOrderId || !razorpaySignature)) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Payment verification details are required for Prepaid orders",
-//       });
-//     }
-
-//     // 1. Get and populate the user's cart with both product types
-//     let cart = await Cart.findOne({ userId });
-
-//     if (!cart || cart.items.length === 0) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Cart is empty",
-//       });
-//     }
-
-//     // Separate items by product type for population
-//     const wallpaperItems = cart.items.filter(item => item.productType === 'Wallpaper');
-//     const woodenFloorItems = cart.items.filter(item => item.productType === 'WoodenFloor');
-
-//     // Function to populate items
-//     const populateItems = async (items, model) => {
-//       const productIds = items.map(item => item.productId);
-//       const products = await model.find({ _id: { $in: productIds } })
-//         .select('name images price dp sampleCost thumbnail');
-
-//       return items.map(item => {
-//         const product = products.find(p => p._id.equals(item.productId));
-//         return {
-//           ...item.toObject(),
-//           productDetails: product // attach populated product
-//         };
-//       });
-//     };
-
-//     // Populate both types of items
-//     const populatedWallpapers = wallpaperItems.length > 0
-//       ? await populateItems(wallpaperItems, Wallpaper)
-//       : [];
-
-//     const populatedWoodenFloors = woodenFloorItems.length > 0
-//       ? await populateItems(woodenFloorItems, WoodenFloor)
-//       : [];
-
-//     // Combine all populated items
-//     const allItems = [...populatedWallpapers, ...populatedWoodenFloors];
-
-//     // 2. Calculate prices
-//     const itemsPrice = cart.totalAmount;
-//     const taxPrice = calculateTax(itemsPrice);
-//     const shippingPrice = 0; // Free shipping or calculate as needed
-//     const totalPrice = Math.ceil(itemsPrice + taxPrice + shippingPrice);
-
-//     // 3. Format items for order
-//     const orderItems = allItems.map((item) => ({
-//       productId: item.productId,
-//       productType: item.productType,
-//       productName: item.productDetails?.name || "Unknown",
-//       productThumbnail: item.productType==="Wallpaper"?item.productDetails.images[0]?.pic:item.productDetails?.images ,
-//       isSample: item.isSample,
-//       quantity: item.isSample ? item.quantity : undefined,
-//       floorArea: item.floorArea,
-//       pricePerUnit: item.pricePerUnit,
-//       totalPrice: item.totalPrice,
-//       status: "pending" // Initial status for each item
-//     }));
-//     console.log("all",allItems[0]);
-
-//     // 4. Prepare payment result
-//     const paymentResult = paymentMode === "Prepaid" ? {
-//       razorpay_payment_id: razorpayPaymentId,
-//       razorpay_order_id: razorpayOrderId,
-//       razorpay_signature: razorpaySignature,
-//       status: "paid",
-//       update_time: new Date().toISOString()
-//     } : null;
-
-//     // 5. Create the new order instance
-//     const newOrder = new Order({
-//       user: userId,
-//       items: orderItems,
-//       shippingAddress: {
-//         firstName: shippingAddress.firstName,
-//         lastName: shippingAddress.lastName,
-//         companyName: shippingAddress.companyName || '',
-//         email: shippingAddress.email,
-//         phone: shippingAddress.phone,
-//         Street: shippingAddress.Street,
-//         Landmark: shippingAddress.Landmark || '',
-//         City: shippingAddress.City,
-//         State: shippingAddress.State,
-//         PinCode: shippingAddress.PinCode,
-//         country: shippingAddress.country || 'India',
-//         isHome: shippingAddress.isHome !== false // Default to true if not specified
-//       },
-//       billingAddress: shippingAddress.billingAddress || {
-//         ...shippingAddress,
-//         isHome: shippingAddress.isHome !== false
-//       },
-//       paymentMethod: paymentMode,
-//       paymentResult: paymentResult,
-//       itemsPrice,
-//       taxPrice,
-//       shippingPrice,
-//       discount: shippingAddress.discount || 0,
-//       totalPrice,
-//       status: "pending",
-//       isPaid: paymentMode === "Prepaid",
-//       paidAt: paymentMode === "Prepaid" ? new Date() : null,
-//       isDelivered: false,
-//       deliveredAt: null,
-//       isCancelled: false,
-//       cancelledAt: null,
-//       trackingNumber: null,
-//       notes: shippingAddress.notes || ''
-//     });
-
-//     // 6. Create shipping order
-//     const totalQuantity = allItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
-//     const productNames = allItems.map(item => item.productDetails?.name || "Zendor Product").join(", ");
-
-//     const shippingData = {
-//       api_key: "dd2b48e36cf8eb837d7b",
-//       customer_name: `${shippingAddress.firstName} ${shippingAddress.lastName}`,
-//       customer_email: shippingAddress.email,
-//       customer_address1: shippingAddress.Street,
-//       customer_address2: shippingAddress.Landmark || "",
-//       customer_address_landmark: shippingAddress.Landmark || "",
-//       customer_address_state: shippingAddress.State,
-//       customer_address_city: shippingAddress.City,
-//       customer_address_pincode: shippingAddress.PinCode,
-//       customer_contact_number1: shippingAddress.phone,
-//       customer_contact_number2: "",
-//       product_id: newOrder._id.toString(),
-//       product_name: productNames,
-//       sku: `SKU${Date.now()}_${newOrder._id}`,
-//       mrp: totalPrice.toString(),
-//       product_size: "Multiple",
-//       product_weight: (0.5 * totalQuantity).toString(),
-//       product_color: "Standard",
-//       pay_mode: paymentMode,
-//       quantity: totalQuantity.toString(),
-//       total_amount: totalPrice.toString(),
-//       client_order_no: newOrder._id.toString()
-//     };
-//     console.log("new Order:", newOrder);
-
-//     try {
-//       const shipResponse = await axios.post(
-//         "https://www.shipcorrect.com/api/createForwardOrder.php",
-//         shippingData,
-//         {
-//           headers: {
-//             "Content-Type": "application/json"
-//           }
-//         }
-//       );
-
-//       if (shipResponse.status===200) {
-//         newOrder.trackingNumber = shipResponse.data.order_no;
-//         newOrder.shippingProvider = "ShipCorrect";
-//         console.log("ShipCorrect order created successfully",shipResponse);
-//       } else {
-//         throw new Error('Shipping order creation failed');
-//       }
-//     } catch (error) {
-//       console.error("Shipping API Error:", error.response?.data || error.message);
-//       throw new Error('Failed to create shipping order');
-//     }
-
-//     // 7. Save the final order
-//     const savedOrder = await newOrder.save();
-
-//     // 8. Clear the user's cart
-//     await Cart.findOneAndUpdate(
-//       { userId },
-//       { $set: { items: [], totalAmount: 0, totalQuantity: 0 } }
-//     );
-
-//     // 9. Link order to user's profile
-//     await User.findByIdAndUpdate(userId, {
-//       $push: { orders: savedOrder._id },
-//       $set: {
-//         shippingAddress: newOrder.shippingAddress,
-//         billingAddress: newOrder.billingAddress
-//       }
-//     });
-
-//     res.status(201).json({
-//       success: true,
-//       message: "Order created successfully",
-//       data: {
-//         orderId: savedOrder._id,
-//         orderNumber: savedOrder.orderNumber, // Virtual field
-//         totalAmount: savedOrder.totalPrice,
-//         status: savedOrder.status,
-//         trackingNumber: savedOrder.trackingNumber,
-//         isPaid: savedOrder.isPaid,
-//         createdAt: savedOrder.createdAt
-//       },
-//     });
-
-//   } catch (err) {
-//     console.error("Create order error:", err);
-//     res.status(500).json({
-//       success: false,
-//       message: "Error creating order",
-//       error: err.message,
-//     });
-//   }
-// };
 
 const createOrder = async (req, res) => {
   try {
@@ -574,55 +348,48 @@ const updateOrder = async (req, res) => {
 
 const getAllOrders = async (req, res) => {
   try {
-    // if (!req.user?.isAdmin) {
-    //   return res.status(403).json({
-    //     success: false,
-    //     message: "Access denied. Admin privileges required."
-    //   });
-    // }
-
     // Fetch all orders with populated user and product details
     const orders = await Order.find({})
-      .populate("user", "userName") // Changed to userName to match the user model
-      .populate({
-        path: "items.productId",
-        model: WoodenFloor,
-        select: "name images price",
-      })
-      .populate({
-        path: "items.productId",
-        model: Wallpaper,
-        select: "name images price",
-      })
+      .populate("user", "userName email") // Changed to match user model
       .sort({ createdAt: -1 }) // Most recent orders first
-      .lean(); // Convert to plain JavaScript object
+      .lean();
 
-    console.log(orders, "orders");
+    // Format orders for frontend
+    const formattedOrders = orders.map((order) => {
+      // Calculate total items count
+      const totalItems = order.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
-    // Format orders to match frontend UI requirements
-    const formattedOrders = orders.map((order) => ({
-      orderId: `ORD-${order._id.toString().slice(-8).toUpperCase()}`, // Format: #25426
-      date: new Date(order.createdAt).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }), // Format: Nov 8th,2023
-      customer: order.user?.userName || "Unknown",
-      status: order.status.charAt(0).toUpperCase() + order.status.slice(1), // Capitalize status
-      amount: `₹${order.totalPrice.toFixed(2)}`, // Format: ₹200.00
-      _id: order._id, // Keep original ID for actions
-    }));
+      return {
+        orderId: order.order_id,
+        orderNumber: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
+        date: new Date(order.createdAt).toLocaleDateString("en-US", {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        }),
+        customer: order.user?.userName || "Unknown",
+        itemsCount: totalItems,
+        status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
+        paymentMethod: order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Prepaid',
+        amount: `₹${order.totalPrice.toFixed(2)}`,
+        isPaid: order.isPaid,
+        isDelivered: order.isDelivered,
+        trackingNumber: order.awb_code || 'Not shipped yet',
+        _id: order._id
+      };
+    });
 
     // Calculate statistics for admin dashboard
     const statistics = {
       totalOrders: orders.length,
       totalRevenue: orders.reduce((sum, order) => sum + order.totalPrice, 0),
-      pendingOrders: orders.filter((order) => order.status === "pending")
-        .length,
-      deliveredOrders: orders.filter((order) => order.status === "delivered")
-        .length,
-      canceledOrders: orders.filter((order) => order.status === "canceled")
-        .length,
+      pendingOrders: orders.filter(order => order.status === 'pending').length,
+      processingOrders: orders.filter(order => order.status === 'processing').length,
+      shippedOrders: orders.filter(order => order.status === 'shipped').length,
+      deliveredOrders: orders.filter(order => order.status === 'delivered').length,
+      cancelledOrders: orders.filter(order => order.status === 'cancelled').length,
+      codOrders: orders.filter(order => order.paymentMethod === 'COD').length,
+      prepaidOrders: orders.filter(order => order.paymentMethod === 'Prepaid').length,
     };
 
     res.status(200).json({
@@ -630,7 +397,7 @@ const getAllOrders = async (req, res) => {
       message: "Orders retrieved successfully",
       data: {
         orders: formattedOrders,
-        statistics,
+        statistics
       },
     });
   } catch (err) {
@@ -652,137 +419,81 @@ const getOrderDetails = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Invalid order ID format",
-        error: "Please provide a valid MongoDB ObjectId",
       });
     }
 
-    // First get the order with basic user info
+    // Get the order with basic user info
     const order = await Order.findById(orderId)
-      .populate("user", "userName email phone profilePicture")
+      .populate("user", "name email phone")
       .lean();
 
     if (!order) {
       return res.status(404).json({
         success: false,
         message: "Order not found",
-        error: `No order found with ID: ${orderId}`,
       });
     }
-
-    // Separate items by product type for population
-    const wallpaperItems = order.items.filter(
-      (item) => item.productType === "Wallpaper"
-    );
-    const woodenFloorItems = order.items.filter(
-      (item) => item.productType === "WoodenFloor"
-    );
-
-    // Function to populate items
-    const populateItems = async (items, model) => {
-      const productIds = items.map((item) => item.productId);
-      const products = await model
-        .find({ _id: { $in: productIds } })
-        .select("name images price dp sampleCost thumbnail category texture")
-        .lean();
-
-      return items.map((item) => {
-        const product = products.find((p) => p._id.equals(item.productId));
-        return {
-          ...item,
-          productDetails: product || null,
-        };
-      });
-    };
-
-    // Populate both types of items
-    const populatedWallpapers =
-      wallpaperItems.length > 0
-        ? await populateItems(wallpaperItems, Wallpaper)
-        : [];
-
-    const populatedWoodenFloors =
-      woodenFloorItems.length > 0
-        ? await populateItems(woodenFloorItems, WoodenFloor)
-        : [];
-
-    // Combine all populated items back into order
-    order.items = [...populatedWallpapers, ...populatedWoodenFloors];
 
     // Format order details for frontend
     const formattedOrder = {
       orderInfo: {
-        id: order._id,
+        id: order.order_id ,
         number: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
         date: new Date(order.createdAt).toISOString(),
         status: order.status,
-        trackingNumber: order.trackingNumber,
-        shippingProvider: order.shippingProvider || "ShipCorrect",
+        trackingNumber: order.awb_code,
+        shippingProvider: order.shippingProvider || "Shiprocket",
         notes: order.notes || "",
+        shipmentId: order.shipment_id,
       },
       customer: {
-        id: order.user._id,
-        name: order.user.userName,
-        email: order.user.email,
-        phone: order.user.phone,
-        avatar: order.user.profilePicture || "/default-avatar.png",
+        id: order.user?._id,
+        name: order.shippingAddress.firstName + ' ' + (order.shippingAddress.lastName || ''),
+        email: order.user?.email || order.shippingAddress.email,
+        phone: order.user?.phone || order.shippingAddress.phone,
       },
       shipping: {
         address: {
+          name: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName || ''}`,
           street: order.shippingAddress.Street,
           landmark: order.shippingAddress.Landmark || "",
           city: order.shippingAddress.City,
           state: order.shippingAddress.State,
           country: order.shippingAddress.country || "India",
           pinCode: order.shippingAddress.PinCode,
-          type: order.shippingAddress.isHome ? "Home" : "Work",
+          phone: order.shippingAddress.phone,
         },
-        method: "Standard Delivery", // Can be dynamic if available
-        estimatedDelivery: order.expectedDelivery
-          ? new Date(order.expectedDelivery).toISOString()
-          : null,
+        method: "Standard Delivery",
       },
       billing: {
-        address: order.billingAddress
-          ? {
-              street: order.billingAddress.Street,
-              landmark: order.billingAddress.Landmark || "",
-              city: order.billingAddress.City,
-              state: order.billingAddress.State,
-              country: order.billingAddress.country || "India",
-              pinCode: order.billingAddress.PinCode,
-            }
-          : null,
+        address: order.billingAddress ? {
+          name: `${order.billingAddress.firstName} ${order.billingAddress.lastName || ''}`,
+          street: order.billingAddress.Street,
+          landmark: order.billingAddress.Landmark || "",
+          city: order.billingAddress.City,
+          state: order.billingAddress.State,
+          country: order.billingAddress.country || "India",
+          pinCode: order.billingAddress.PinCode,
+          phone: order.billingAddress.phone,
+        } : null,
         method: order.paymentMethod,
         transactionId: order.paymentResult?.razorpay_payment_id || null,
-        status: order.isPaid
-          ? "Paid"
-          : order.paymentMethod === "COD"
-          ? "Pending"
-          : "Failed",
+        status: order.isPaid ? "Paid" : order.paymentMethod === "COD" ? "Pending" : "Failed",
         paidAt: order.paidAt ? new Date(order.paidAt).toISOString() : null,
       },
-      items: order.items.map((item) => ({
+      items: order.items.map(item => ({
         id: item.productId,
         type: item.productType,
-        name:
-          item.productDetails?.name || item.productName || "Unknown Product",
-        sku:
-          item.productDetails?.sku ||
-          `SKU-${item.productId.toString().slice(-6)}`,
-        image:
-          item.productDetails?.images?.[0] ||
-          item.productDetails?.thumbnail ||
-          item.productThumbnail ||
-          "/product-placeholder.jpg",
-        category: item.productDetails?.category || item.productType,
+        name: item.productName || "Unknown Product",
+        image: item.productThumbnail || "/product-placeholder.jpg",
         price: item.pricePerUnit,
         quantity: item.quantity || (item.isSample ? 1 : null),
         total: item.totalPrice,
-        texture: item.productDetails?.texture ,
         isSample: item.isSample || false,
-        size: item.size,
         floorArea: item.floorArea,
         status: item.status || "pending",
+        color: item.color,
+        texture: item.texture,
       })),
       summary: {
         subtotal: order.itemsPrice,
@@ -795,28 +506,28 @@ const getOrderDetails = async (req, res) => {
       timeline: [
         {
           status: "Order Placed",
-          date: new Date(order.createdAt).toISOString(),
+          date: order.createdAt,
           completed: true,
         },
         {
+          status: "Confirmed",
+          date: order.confirmedAt,
+          completed: ["confirmed", "processing", "shipped", "delivered"].includes(order.status),
+        },
+        {
           status: "Processing",
-          date: order.processingAt
-            ? new Date(order.processingAt).toISOString()
-            : null,
-          completed: order.status !== "pending",
+          date: order.processingAt,
+          completed: ["processing", "shipped", "delivered"].includes(order.status),
         },
         {
           status: "Shipped",
-          date: order.shippedAt
-            ? new Date(order.shippedAt).toISOString()
-            : null,
+          date: order.shippedAt,
           completed: ["shipped", "delivered"].includes(order.status),
+          trackingNumber: order.awb_code,
         },
         {
           status: "Delivered",
-          date: order.deliveredAt
-            ? new Date(order.deliveredAt).toISOString()
-            : null,
+          date: order.deliveredAt,
           completed: order.status === "delivered",
         },
       ],
@@ -828,16 +539,11 @@ const getOrderDetails = async (req, res) => {
       data: formattedOrder,
     });
   } catch (err) {
-    console.error("Get order details error:", {
-      error: err.message,
-      stack: err.stack,
-      orderId: req.params.orderId,
-    });
-
+    console.error("Get order details error:", err);
     res.status(500).json({
       success: false,
-      message: "Internal server error while retrieving order details",
-      error: process.env.NODE_ENV === "development" ? err.message : undefined,
+      message: "Error retrieving order details",
+      error: err.message,
     });
   }
 };
