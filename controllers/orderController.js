@@ -439,7 +439,7 @@ const getOrderDetails = async (req, res) => {
     const formattedOrder = {
       orderInfo: {
         id: order.order_id ,
-        number: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
+        number: order._id,
         date: new Date(order.createdAt).toISOString(),
         status: order.status,
         trackingNumber: order.awb_code,
@@ -552,6 +552,7 @@ const getOrderDetails = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
+    console.log("Update order status endpoint called",orderId);
     const { status, trackingNumber, cancellationReason, notes } = req.body;
     const userId = req.user?.id; // Assuming you have user authentication
     console.log(orderId, status, trackingNumber, cancellationReason, notes);
@@ -589,16 +590,6 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    // Check if user has permission (admin or order owner)
-    if (
-      order.user.toString() !== userId.toString() &&
-      req.user.role !== "admin"
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: "Unauthorized to update this order",
-      });
-    }
 
     // Prepare update object
     const updateData = {
