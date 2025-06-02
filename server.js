@@ -14,10 +14,15 @@ const app = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: ["https://www.zendor.com", "http://localhost:3000","https://zendor-5ibbhwcv3-laliths-projects-b499606f.vercel.app/","https://zendor-app.vercel.app/"],
+    origin: [
+      "https://www.zendor.com", 
+      "http://localhost:3000",
+      "https://zendor-app.vercel.app",
+      "https://zendor-backend-s1ci.onrender.com"
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization"]
   })
 );
 
