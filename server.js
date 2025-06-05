@@ -15,7 +15,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: [
-      "https://www.zendor.com", 
+      "https://www.zendorr.com", 
       "http://localhost:3000",
       "https://zendor-app.vercel.app",
       "https://zendor-backend-s1ci.onrender.com"
