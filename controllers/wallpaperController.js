@@ -17,17 +17,35 @@ exports.fetchColors = async (req, res) => {
 };
 // Get all products with filtering, sorting, and pagination
 exports.getProducts = async (req, res) => {
+  console.log("req",req.query); // Log the query parameter
   try {
     const {
       search,
-      subCategory="All",
-      sortBy = "Featured",
+      subCategory = "All",
+      sortBy = "featured",
       page = 1,
       limit = 10,
+      colors,
+      minPrice,
+      maxPrice,
+      priceSort
     } = req.query;
-     console.log(req.query)
-    // Build query with improved search
+
     const query = { isActive: true };
+
+    // Color filter
+    if (colors) {
+      const colorList = colors.split(',');
+      console.log(colorList);
+      query['images.color'] = { $in: colorList };
+    }
+
+    // Price range filter
+    if (minPrice || maxPrice) {
+      query.dp = {};
+      if (minPrice) query.dp.$gte = Number(minPrice);
+      if (maxPrice) query.dp.$lte = Number(maxPrice);
+    }
     
     // Enhanced search functionality
     if (search && search.trim() !== "") {
@@ -59,6 +77,17 @@ exports.getProducts = async (req, res) => {
       case "Featured":
       default:
         sortConfig = { createdAt: -1 };
+        break;
+    }
+    switch(priceSort){
+      case "low-to-high":
+        sortConfig = {dp: 1};
+        break;
+      case "high-to-low":
+        sortConfig = {dp: -1};
+        break;
+      default:
+        sortConfig = {createdAt: -1};
         break;
     }
 

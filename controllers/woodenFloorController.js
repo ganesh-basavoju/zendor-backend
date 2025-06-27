@@ -5,14 +5,22 @@ exports.getProducts = async (req, res) => {
   try {
     const {
       search,
-      subCategory="All",
+      subCategory = "All",
       sortBy = "Featured",
       page = 1,
       limit = 10,
+      minPrice,
+      maxPrice
     } = req.query;
-     console.log(req.query)
-    // Build query with improved search
+
     const query = { isActive: true };
+
+    // Price range filter
+    if (minPrice || maxPrice) {
+      query.dp = {};
+      if (minPrice) query.dp.$gte = Number(minPrice);
+      if (maxPrice) query.dp.$lte = Number(maxPrice);
+    }
     
     // Enhanced search functionality
     if (search && search.trim() !== "") {
