@@ -1,5 +1,20 @@
 const Wallpaper = require("../models/wallpaperModel");
 
+exports.fetchColors = async (req, res) => {
+  try {
+    const colors = await Wallpaper.distinct("images.color");
+    res.status(200).json({ 
+      success: true,
+      colors: colors.filter(c => c) // Remove empty/null values
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch colors",
+      error: error.message
+    });
+  }
+};
 // Get all products with filtering, sorting, and pagination
 exports.getProducts = async (req, res) => {
   try {
@@ -71,10 +86,15 @@ exports.getProducts = async (req, res) => {
         price: product.dp,
         sampleCost: product.sampleCost,
         image: product.images[0].pic,
+        colors: product.images,
+        surface: product.surface,
+        finish: product.finish,
+        brand: product.brand,
       
       })),
     });
   } catch (error) {
+    console.error(error); // Log the error for debugging purpose
     res.status(500).json({
       status: "error",
       message: error.message,

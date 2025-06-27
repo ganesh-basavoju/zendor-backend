@@ -16,5 +16,6 @@ router.delete('/:id', wallpaperController.deleteProduct);
 
 //push all
 router.post("/pushall", wallpaperController.pushAll);
+router.get("/getColors",wallpaperController.fetchColors)
 
 module.exports = router;
