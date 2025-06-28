@@ -268,6 +268,22 @@ const orderSchema = new Schema(
       min: [0, "Discount cannot be negative"],
       default: 0,
     },
+    coupon: {
+      type: String,
+    },
+    isCouponApplied: {
+      type: Boolean,
+      default: false,
+    },
+
+    totalAfterCoupon: {
+      type: Number,
+      min: [0, "Total after coupon cannot be negative"],
+    },
+    couponId:{
+      type: Types.ObjectId,
+      ref: "Coupon",
+    },
     totalPrice: {
       type: Number,
       required: [true, "Total price is required"],

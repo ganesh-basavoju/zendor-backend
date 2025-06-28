@@ -10,6 +10,7 @@ const acousticRoutes = require("./routes/acousticRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const shipRocketRoutes = require("./routes/shiprocketRoutes");
+const couponRoutes = require("./routes/couponRoutes");
 const app = express();  
 app.use(express.json());
 app.use(
@@ -41,6 +42,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/shiprocket", shipRocketRoutes);
+app.use("/api/coupons",couponRoutes );
 
 app.listen(process.env.PORT, () => {
   console.log(`Server is running on http://localhost: ${process.env.PORT}`);

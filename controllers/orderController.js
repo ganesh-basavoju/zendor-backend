@@ -7,12 +7,11 @@ const WoodenFloor = require("../models/woodenFloorModel");
 const Wallpaper = require("../models/wallpaperModel");
 const { getShiprocketToken } = require("../utils/shiprocket");
 const axios = require("axios");
+const Coupons = require("../models/couponModel");
 // const razorpay = new Razorpay({
 //   key_id: process.env.RAZORPAY_KEY_ID,
 //   key_secret: process.env.RAZORPAY_SECRET,
 // });
-
-
 
 const createOrder = async (req, res) => {
   try {
@@ -26,6 +25,11 @@ const createOrder = async (req, res) => {
       razorpayPaymentId,
       razorpayOrderId,
       razorpaySignature,
+      coupon = "",
+      isCouponApplied = false,
+      discount = 0,
+      totalAfterCoupon,
+      couponId = null,
     } = req.body;
 
     if (!shippingAddress) {
@@ -93,7 +97,7 @@ const createOrder = async (req, res) => {
     const shippingPrice = 0;
     const totalPrice = Math.ceil(itemsPrice + taxPrice + shippingPrice);
     console.log("all itms", allItems);
-    
+
     const orderItems = allItems.map((item) => ({
       productId: item.productId,
       productType: item.productType,
@@ -108,7 +112,7 @@ const createOrder = async (req, res) => {
         item.productType === "Wallpaper" ? item.productDetails.texture : "",
       quantity: item.isSample ? item.quantity : undefined,
       floorArea: item.floorArea,
-      pricePerUnit: item.pricePerUnit||0,
+      pricePerUnit: item.pricePerUnit || 0,
       totalPrice: item.totalPrice,
       status: "pending",
       texture: item?.texture || "NA",
@@ -136,7 +140,11 @@ const createOrder = async (req, res) => {
       itemsPrice,
       taxPrice,
       shippingPrice,
-      discount: shippingAddress.discount || 0,
+      discount: discount || 0,
+      coupon: coupon || "",
+      isCouponApplied: isCouponApplied || false,
+      couponId: couponId === "" ? null : couponId,
+      totalAfterCoupon: totalAfterCoupon || totalPrice,
       totalPrice,
       status: "pending",
       isPaid: paymentMode === "Prepaid",
@@ -252,6 +260,11 @@ const createOrder = async (req, res) => {
         billingAddress: newOrder.billingAddress,
       },
     });
+    if (isCouponApplied) {
+      await Coupons.findByIdAndUpdate(couponId, {
+        $push: { usedBy: userId },
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -359,25 +372,29 @@ const getAllOrders = async (req, res) => {
     // Format orders for frontend
     const formattedOrders = orders.map((order) => {
       // Calculate total items count
-      const totalItems = order.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+      const totalItems = order.items.reduce(
+        (sum, item) => sum + (item.quantity || 1),
+        0
+      );
 
       return {
         orderId: order.order_id,
         orderNumber: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
         date: new Date(order.createdAt).toLocaleDateString("en-US", {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
+          year: "numeric",
+          month: "short",
+          day: "numeric",
         }),
         customer: order.user?.userName || "Unknown",
         itemsCount: totalItems,
         status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
-        paymentMethod: order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Prepaid',
+        paymentMethod:
+          order.paymentMethod === "COD" ? "Cash on Delivery" : "Prepaid",
         amount: `₹${order.totalPrice.toFixed(2)}`,
         isPaid: order.isPaid,
         isDelivered: order.isDelivered,
-        trackingNumber: order.awb_code || 'Not shipped yet',
-        _id: order._id
+        trackingNumber: order.awb_code || "Not shipped yet",
+        _id: order._id,
       };
     });
 
@@ -385,13 +402,19 @@ const getAllOrders = async (req, res) => {
     const statistics = {
       totalOrders: orders.length,
       totalRevenue: orders.reduce((sum, order) => sum + order.totalPrice, 0),
-      pendingOrders: orders.filter(order => order.status === 'pending').length,
-      processingOrders: orders.filter(order => order.status === 'processing').length,
-      shippedOrders: orders.filter(order => order.status === 'shipped').length,
-      deliveredOrders: orders.filter(order => order.status === 'delivered').length,
-      cancelledOrders: orders.filter(order => order.status === 'cancelled').length,
-      codOrders: orders.filter(order => order.paymentMethod === 'COD').length,
-      prepaidOrders: orders.filter(order => order.paymentMethod === 'Prepaid').length,
+      pendingOrders: orders.filter((order) => order.status === "pending")
+        .length,
+      processingOrders: orders.filter((order) => order.status === "processing")
+        .length,
+      shippedOrders: orders.filter((order) => order.status === "shipped")
+        .length,
+      deliveredOrders: orders.filter((order) => order.status === "delivered")
+        .length,
+      cancelledOrders: orders.filter((order) => order.status === "cancelled")
+        .length,
+      codOrders: orders.filter((order) => order.paymentMethod === "COD").length,
+      prepaidOrders: orders.filter((order) => order.paymentMethod === "Prepaid")
+        .length,
     };
 
     res.status(200).json({
@@ -399,7 +422,7 @@ const getAllOrders = async (req, res) => {
       message: "Orders retrieved successfully",
       data: {
         orders: formattedOrders,
-        statistics
+        statistics,
       },
     });
   } catch (err) {
@@ -439,7 +462,7 @@ const getOrderDetails = async (req, res) => {
     // Format order details for frontend
     const formattedOrder = {
       orderInfo: {
-        id: order.order_id ,
+        id: order.order_id,
         number: `ORD-${order._id.toString().slice(-8).toUpperCase()}`,
         date: new Date(order.createdAt).toISOString(),
         status: order.status,
@@ -450,13 +473,18 @@ const getOrderDetails = async (req, res) => {
       },
       customer: {
         id: order.user?._id,
-        name: order.shippingAddress.firstName + ' ' + (order.shippingAddress.lastName || ''),
+        name:
+          order.shippingAddress.firstName +
+          " " +
+          (order.shippingAddress.lastName || ""),
         email: order.user?.email || order.shippingAddress.email,
         phone: order.user?.phone || order.shippingAddress.phone,
       },
       shipping: {
         address: {
-          name: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName || ''}`,
+          name: `${order.shippingAddress.firstName} ${
+            order.shippingAddress.lastName || ""
+          }`,
           street: order.shippingAddress.Street,
           landmark: order.shippingAddress.Landmark || "",
           city: order.shippingAddress.City,
@@ -468,22 +496,30 @@ const getOrderDetails = async (req, res) => {
         method: "Standard Delivery",
       },
       billing: {
-        address: order.billingAddress ? {
-          name: `${order.billingAddress.firstName} ${order.billingAddress.lastName || ''}`,
-          street: order.billingAddress.Street,
-          landmark: order.billingAddress.Landmark || "",
-          city: order.billingAddress.City,
-          state: order.billingAddress.State,
-          country: order.billingAddress.country || "India",
-          pinCode: order.billingAddress.PinCode,
-          phone: order.billingAddress.phone,
-        } : null,
+        address: order.billingAddress
+          ? {
+              name: `${order.billingAddress.firstName} ${
+                order.billingAddress.lastName || ""
+              }`,
+              street: order.billingAddress.Street,
+              landmark: order.billingAddress.Landmark || "",
+              city: order.billingAddress.City,
+              state: order.billingAddress.State,
+              country: order.billingAddress.country || "India",
+              pinCode: order.billingAddress.PinCode,
+              phone: order.billingAddress.phone,
+            }
+          : null,
         method: order.paymentMethod,
         transactionId: order.paymentResult?.razorpay_payment_id || null,
-        status: order.isPaid ? "Paid" : order.paymentMethod === "COD" ? "Pending" : "Failed",
+        status: order.isPaid
+          ? "Paid"
+          : order.paymentMethod === "COD"
+          ? "Pending"
+          : "Failed",
         paidAt: order.paidAt ? new Date(order.paidAt).toISOString() : null,
       },
-      items: order.items.map(item => ({
+      items: order.items.map((item) => ({
         id: item.productId,
         type: item.productType,
         name: item.productName || "Unknown Product",
@@ -514,12 +550,19 @@ const getOrderDetails = async (req, res) => {
         {
           status: "Confirmed",
           date: order.confirmedAt,
-          completed: ["confirmed", "processing", "shipped", "delivered"].includes(order.status),
+          completed: [
+            "confirmed",
+            "processing",
+            "shipped",
+            "delivered",
+          ].includes(order.status),
         },
         {
           status: "Processing",
           date: order.processingAt,
-          completed: ["processing", "shipped", "delivered"].includes(order.status),
+          completed: ["processing", "shipped", "delivered"].includes(
+            order.status
+          ),
         },
         {
           status: "Shipped",
